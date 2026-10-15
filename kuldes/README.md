@@ -51,6 +51,9 @@ ezért csak megbízható embereknek add oda.
 
 ## Korlátok
 
+- Csak `@szamosiskola.hu` és `@tanulo.szamosiskola.hu` címre lehet küldeni. Ezt a workflow
+  ellenőrzi; a listát az `ENGEDETT_DOMAINEK` változóval (vesszővel elválasztva) lehet módosítani.
+
 - A csatolmányok együtt legfeljebb 25 MB-osak lehetnek (Gmail).
 - Egyszerre legfeljebb 10 címzett.
 - Egy küldés kb. fél-egy perc, ennyi idő alatt indul el és fut le a workflow.
