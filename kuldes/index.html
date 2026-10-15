@@ -262,6 +262,9 @@
 
   function api(ut, opciok, sajatToken) {
     opciok = opciok || {};
+    // A GitHub API válaszait a böngésző 60 mp-ig gyorsítótárazná, így a futás
+    // állapotát késve látnánk.
+    opciok.cache = 'no-store';
     opciok.headers = {
       'Authorization': 'Bearer ' + (sajatToken || token),
       'Accept': 'application/vnd.github+json',
