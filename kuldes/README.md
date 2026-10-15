@@ -39,10 +39,15 @@ Nem kötelező **változók** (ugyanott, a Variables fülön): `EMAIL_NEV` (fela
 Fine-grained tokens → Generate new token. Repository access: csak a
 `kozles/posztol`; Permissions → `Contents`: Read and write, `Actions`: Read and write.
 
-Az oldalon a **Beállítások** alatt add meg a tokent és a `FAJLKULDO_KULCS`-ot.
-Ezek csak abban a böngészőben tárolódnak. Aki küldeni akar az oldalról, annak
-mindkettő kell, mert GitHubon nincs olyan háttér, ami token nélkül fogadna fájlt.
+A tokent egyszer kell elmenteni: nyisd meg az oldalt `#admin` végződéssel
+(`https://kozles.github.io/posztol/kuldes/#admin`), add meg a közös jelszót
+(`FAJLKULDO_KULCS`) és a tokent, majd nyomd meg a mentés gombot. A token a jelszóval
+titkosítva kerül a `kuldes/token.json` fájlba, a felhasználók nem látják.
 
+A felhasználók az űrlapon csak a **Titkos kulcs** mezőt töltik ki (ez a
+`FAJLKULDO_KULCS`). A böngésző megjegyzi, nem kell mindig beírni. Kulcs nélkül
+nem lehet küldeni. Aki ismeri a kulcsot, az elvileg a tokent is kibonthatja,
+ezért csak megbízható embereknek add oda.
 
 ## Korlátok
 

@@ -79,9 +79,6 @@
   .uzenet.ok { display: block; background: var(--green-soft); color: var(--green); }
   .uzenet.hiba { display: block; background: var(--red-soft); color: var(--red); }
   .rejtett { display: none; }
-  details.beall { margin-top: 16px; }
-  details.beall summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
-  details.beall .panel { margin-top: 10px; }
   .gomb-kicsi { width: auto; margin-top: 12px; padding: 8px 14px; font-size: 14px; }
   code { font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
 </style>
@@ -110,26 +107,28 @@
     <ul class="lista" id="lista"></ul>
     <div class="ossz" id="ossz"></div>
 
+    <label for="titkos">Titkos kulcs</label>
+    <input type="password" id="titkos" autocomplete="current-password" required>
+
     <button type="submit" class="gomb" id="gomb">Küldés</button>
     <div class="uzenet" id="uzenet" role="status"></div>
   </form>
 
-  <details class="beall" id="beall">
-    <summary>Beállítások (első használatkor kell)</summary>
-    <div class="panel">
-      <label for="token">GitHub token</label>
-      <input type="password" id="token" autocomplete="off" placeholder="github_pat_...">
-      <div class="sugo">Fine-grained token csak ehhez a repóhoz, <code>Contents</code> és <code>Actions</code>: Read and write.</div>
-      <label for="kulcs">Titkosító kulcs</label>
-      <input type="password" id="kulcs" autocomplete="off">
-      <div class="sugo">Ugyanaz, mint a repó <code>FAJLKULDO_KULCS</code> secretje. Csak ebben a böngészőben tárolódik.</div>
-      <button type="button" class="gomb gomb-kicsi" id="mentes">Mentés</button>
-    </div>
-  </details>
+  <!-- Csak az #admin címmel nyitva látszik (egyszeri beállítás), a látogatók nem látják. -->
+  <div class="panel rejtett" id="admin" style="margin-top:16px">
+    <label for="kulcs">Közös jelszó (a <code>FAJLKULDO_KULCS</code> secret)</label>
+    <input type="password" id="kulcs" autocomplete="off">
+    <label for="token">GitHub token</label>
+    <input type="password" id="token" autocomplete="off" placeholder="github_pat_...">
+    <div class="sugo">Fine-grained token csak ehhez a repóhoz, <code>Contents</code> és <code>Actions</code>: Read and write.
+      A jelszóval titkosítva kerül a repóba (<code>kuldes/token.json</code>).</div>
+    <button type="button" class="gomb gomb-kicsi" id="tokenMentes">Token titkosítása és mentése</button>
+    <div class="uzenet" id="adminUzenet" role="status"></div>
+  </div>
 </div>
 
 <script>
-  // A küldést a repó GitHub Actions workflow-ja végzi (.github/workflows/fajlkuldo.yml),
+  // A küldést a repó GitHub Actions workflow-ja végzi (.github/workflows/kuldes.yml),
   // az e-mail fiók adatai a repó secretjeiben vannak, az oldal nem látja őket.
   // A repót az oldal címéből számoljuk ki (kozles.github.io/posztol/kuldes/ -> kozles/posztol),
   // így átnevezés után sem kell átírni.
@@ -153,14 +152,9 @@
       localStorage.setItem(kulcs, ertek);
     } catch (e) { return ''; }
   }
-  el('token').value = tarolo('fajlkuldo_token');
-  el('kulcs').value = tarolo('fajlkuldo_kulcs');
-  if (!el('token').value || !el('kulcs').value) el('beall').open = true;
-  el('mentes').onclick = function () {
-    tarolo('fajlkuldo_token', el('token').value.trim());
-    tarolo('fajlkuldo_kulcs', el('kulcs').value);
-    el('beall').open = false;
-  };
+  // A titkos kulcs (a FAJLKULDO_KULCS secret) a böngészőben megmarad, nem kell mindig beírni.
+  el('titkos').value = tarolo('fajlkuldo_kulcs');
+  if (location.hash === '#admin') el('admin').classList.remove('rejtett');
 
   function meretSzoveg(b) {
     if (b < 1024) return b + ' B';
@@ -215,32 +209,62 @@
     });
   }
 
-  // AES-GCM titkosítás a FAJLKULDO_KULCS-ból PBKDF2-vel képzett kulccsal.
-  function titkosit(szoveg, jelszo) {
-    var salt = crypto.getRandomValues(new Uint8Array(16));
-    var iv = crypto.getRandomValues(new Uint8Array(12));
-    var enc = new TextEncoder();
-    return crypto.subtle.importKey('raw', enc.encode(jelszo), 'PBKDF2', false, ['deriveKey'])
+  function base64Bajt(s) {
+    var b = atob(s), u = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+    return u;
+  }
+
+  // AES-GCM kulcs a közös jelszóból (FAJLKULDO_KULCS) PBKDF2-vel.
+  function kulcsKepzes(jelszo, salt, hasznalat) {
+    return crypto.subtle.importKey('raw', new TextEncoder().encode(jelszo), 'PBKDF2', false, ['deriveKey'])
       .then(function (alap) {
         return crypto.subtle.deriveKey(
           { name: 'PBKDF2', salt: salt, iterations: PBKDF2_KOROK, hash: 'SHA-256' },
-          alap, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
-      })
-      .then(function (kulcs) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, kulcs, enc.encode(szoveg)); })
+          alap, { name: 'AES-GCM', length: 256 }, false, [hasznalat]);
+      });
+  }
+
+  function titkosit(szoveg, jelszo) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return kulcsKepzes(jelszo, salt, 'encrypt')
+      .then(function (kulcs) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, kulcs, new TextEncoder().encode(szoveg)); })
       .then(function (titkos) {
         return { adat: bajtBase64(new Uint8Array(titkos)), salt: bajtBase64(salt), iv: bajtBase64(iv) };
       });
   }
 
-  function api(ut, opciok) {
+  function kibont(t, jelszo) {
+    return kulcsKepzes(jelszo, base64Bajt(t.salt), 'decrypt')
+      .then(function (kulcs) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64Bajt(t.iv) }, kulcs, base64Bajt(t.adat)); })
+      .then(function (nyers) { return new TextDecoder().decode(nyers); });
+  }
+
+  // A GitHub token titkosítva van a repóban (token.json), a jelszóval bontjuk ki.
+  var token = '';
+  function tokenBetoltes() {
+    return fetch('token.json?' + Date.now(), { cache: 'no-store' })
+      .then(function (v) {
+        if (!v.ok) throw new Error('Az oldal még nincs beállítva: az adminnak el kell mentenie a GitHub tokent.');
+        return v.json();
+      })
+      .then(function (t) { return kibont(t, el('titkos').value); })
+      .then(function (t) { token = t; tarolo('fajlkuldo_kulcs', el('titkos').value); return t; }, function (e) {
+        if (e instanceof Error && e.message.indexOf('adminnak') !== -1) throw e;
+        throw new Error('Hibás titkos kulcs.');
+      });
+  }
+
+  function api(ut, opciok, sajatToken) {
     opciok = opciok || {};
     opciok.headers = {
-      'Authorization': 'Bearer ' + tarolo('fajlkuldo_token'),
+      'Authorization': 'Bearer ' + (sajatToken || token),
       'Accept': 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28'
     };
     return fetch('https://api.github.com/repos/' + REPO + ut, opciok).then(function (v) {
-      if (v.status === 401) throw new Error('A GitHub token érvénytelen vagy lejárt (Beállítások).');
+      if (v.status === 401) throw new Error('A GitHub token érvénytelen vagy lejárt, az adminnak újat kell mentenie.');
       if (v.status === 403 || v.status === 404) throw new Error('A GitHub tokennek nincs joga ehhez a repóhoz (Contents és Actions: Read and write kell).');
       if (!v.ok) return v.text().then(function (t) { throw new Error('GitHub hiba (' + v.status + '): ' + t.slice(0, 200)); });
       return v.status === 204 ? null : v.json();
@@ -265,11 +289,40 @@
     u.className = 'uzenet ' + tipus;
   }
 
+  // Admin: a tokent a jelszóval titkosítva elmenti a repóba (kuldes/token.json).
+  el('tokenMentes').onclick = function () {
+    var uj = el('token').value.trim();
+    var jelszo = el('kulcs').value;
+    var u = el('adminUzenet');
+    var kiir = function (sz, t) { u.textContent = sz; u.className = 'uzenet ' + t; };
+    if (!jelszo) return kiir('Add meg a közös jelszót (FAJLKULDO_KULCS).', 'hiba');
+    if (!uj) return kiir('Add meg a tokent.', 'hiba');
+    var ut = '/contents/kuldes/token.json';
+    kiir('Mentés…', 'ok');
+    titkosit(uj, jelszo)
+      .then(function (t) {
+        var tartalom = btoa(JSON.stringify(t));
+        return api(ut + '?ref=' + AG, null, uj).then(function (v) { return v.sha; }, function () { return null; })
+          .then(function (sha) {
+            var torzs = { message: 'Fájlküldő: titkosított token frissítése', content: tartalom, branch: AG };
+            if (sha) torzs.sha = sha;
+            return api(ut, { method: 'PUT', body: JSON.stringify(torzs) }, uj);
+          });
+      })
+      .then(function () {
+        tarolo('fajlkuldo_kulcs', jelszo);
+        el('token').value = '';
+        kiir('Elmentve. Egy-két perc, mire az oldal frissül, utána lehet küldeni.', 'ok');
+      })
+      .catch(function (err) { kiir(err.message || String(err), 'hiba'); });
+  };
+
   el('urlap').addEventListener('submit', function (e) {
     e.preventDefault();
     var cimzett = el('cimzett').value.trim();
     var targy = el('targy').value.trim();
-    if (!tarolo('fajlkuldo_token') || !tarolo('fajlkuldo_kulcs')) { el('beall').open = true; return jelez('Előbb add meg és mentsd el a beállításokat.', 'hiba'); }
+    var titkos = el('titkos').value;
+    if (!titkos) return jelez('Add meg a titkos kulcsot.', 'hiba');
     if (!cimzett) return jelez('Add meg a címzettet.', 'hiba');
     if (!targy) return jelez('Add meg a tárgyat.', 'hiba');
     if (!fajlok.length) return jelez('Csatolj legalább egy fájlt.', 'hiba');
@@ -283,11 +336,12 @@
     var kezdet = Date.now();
 
     allapot('Fájlok beolvasása…');
-    Promise.all(fajlok.map(beolvas))
+    tokenBetoltes()
+      .then(function () { return Promise.all(fajlok.map(beolvas)); })
       .then(function (beolvasott) {
         allapot('Titkosítás…');
         var csomag = JSON.stringify({ cimzett: cimzett, targy: targy, uzenet: el('szoveg').value, fajlok: beolvasott });
-        return titkosit(csomag, tarolo('fajlkuldo_kulcs'));
+        return titkosit(csomag, titkos);
       })
       .then(function (t) {
         allapot('Feltöltés…');
