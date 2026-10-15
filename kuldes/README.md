@@ -40,19 +40,16 @@ Fine-grained tokens → Generate new token. Repository access: csak a
 `kozles/posztol`; Permissions → `Contents`: Read and write, `Actions`: Read and write.
 
 A tokent egyszer kell elmenteni: nyisd meg az oldalt `#admin` végződéssel
-(`https://kozles.github.io/posztol/kuldes/#admin`), add meg a közös jelszót
-(`FAJLKULDO_KULCS`) a Jelszó mezőbe és a tokent a GitHub token mezőbe, majd nyomd meg a
-**Token mentése** gombot. A token a jelszóval titkosítva kerül a `kuldes/token.json`
+(`https://kozles.github.io/posztol/kuldes/#admin`), írd be fent a **Titkos kulcsot**
+(ugyanaz, mint a `FAJLKULDO_KULCS` secret), lent a tokent, és nyomd meg a
+**Token mentése** gombot. A token a kulccsal titkosítva kerül a `kuldes/token.json`
 fájlba, a felhasználók nem látják.
 
-**Jelszó csere:** írd át a `FAJLKULDO_KULCS` secretet, majd az `#admin` oldalon írd be
-ugyanazt a Jelszó mezőbe, és nyomd meg a **Jelszó mentése** gombot. A token megmarad: a
-régi jelszót a böngésző megjegyzi, azzal bontja ki és az újjal titkosítja újra.
+Ha a `FAJLKULDO_KULCS`-ot átírod, a tokent ugyanígy újra el kell menteni az új kulccsal.
 
-A felhasználók az űrlapon csak a **Titkos kulcs** mezőt töltik ki (ez a
-`FAJLKULDO_KULCS`). A böngésző megjegyzi, nem kell mindig beírni. Kulcs nélkül
-nem lehet küldeni. Aki ismeri a kulcsot, az elvileg a tokent is kibonthatja,
-ezért csak megbízható embereknek add oda.
+A felhasználók az űrlapon a **Titkos kulcs** mezőt töltik ki (ez a `FAJLKULDO_KULCS`).
+Kulcs nélkül nem lehet küldeni. Aki ismeri a kulcsot, az elvileg a tokent is
+kibonthatja, ezért csak megbízható embereknek add oda.
 
 ## Korlátok
 
