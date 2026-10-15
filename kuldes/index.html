@@ -116,23 +116,16 @@
 
   <!-- Csak az #admin címmel nyitva látszik (egyszeri beállítás), a látogatók nem látják. -->
   <div class="panel rejtett" id="admin" style="margin-top:16px">
-    <h3 style="margin:0 0 8px">Jelszó csere</h3>
-    <label for="regiJelszo">Jelenlegi jelszó</label>
-    <input type="password" id="regiJelszo" autocomplete="off">
-    <label for="ujJelszo">Új jelszó</label>
+    <label for="ujJelszo">Jelszó (ugyanaz, mint a GitHubon a <code>FAJLKULDO_KULCS</code>)</label>
     <input type="password" id="ujJelszo" autocomplete="off">
-    <div class="sugo">A mentett GitHub token megmarad, csak az új jelszóval lesz titkosítva.
-      Utána a <code>FAJLKULDO_KULCS</code> secretet is írd át ugyanerre.</div>
+    <div class="sugo">A mentett token megmarad, csak ezzel a jelszóval lesz titkosítva.</div>
     <button type="button" class="gomb gomb-kicsi" id="jelszoMentes">Jelszó mentése</button>
     <div class="uzenet" id="jelszoUzenet" role="status"></div>
 
-    <h3 style="margin:24px 0 8px">Token csere</h3>
-    <label for="kulcs">Jelszó (a <code>FAJLKULDO_KULCS</code> secret)</label>
-    <input type="password" id="kulcs" autocomplete="off">
-    <label for="token">Új GitHub token</label>
+    <label for="token" style="margin-top:24px">GitHub token</label>
     <input type="password" id="token" autocomplete="off" placeholder="github_pat_...">
     <div class="sugo">Fine-grained token csak ehhez a repóhoz, <code>Contents</code> és <code>Actions</code>: Read and write.
-      A jelszóval titkosítva kerül a repóba (<code>kuldes/token.json</code>).</div>
+      A fenti jelszóval titkosítva kerül a repóba (<code>kuldes/token.json</code>).</div>
     <button type="button" class="gomb gomb-kicsi" id="tokenMentes">Token mentése</button>
     <div class="uzenet" id="adminUzenet" role="status"></div>
   </div>
@@ -326,44 +319,51 @@
     return function (sz, t) { u.textContent = sz; u.className = 'uzenet ' + t; };
   }
 
-  // Jelszó csere: a meglévő tokent a régi jelszóval kibontja, és az újjal titkosítva visszamenti.
+  // Jelszó csere: a meglévő tokent a böngészőben megjegyzett régi jelszóval kibontja,
+  // és az új jelszóval titkosítva visszamenti, így a token megmarad.
   el('jelszoMentes').onclick = function () {
-    var regi = el('regiJelszo').value;
     var uj = el('ujJelszo').value;
+    var regi = tarolo('fajlkuldo_kulcs') || el('titkos').value;
     var kiir = adminKiiro('jelszoUzenet');
-    if (!regi) return kiir('Add meg a jelenlegi jelszót.', 'hiba');
-    if (!uj) return kiir('Add meg az új jelszót.', 'hiba');
-    if (uj === regi) return kiir('Az új jelszó ugyanaz, mint a jelenlegi.', 'hiba');
+    if (!uj) return kiir('Add meg a jelszót.', 'hiba');
     kiir('Mentés…', 'ok');
     fetch('token.json?' + Date.now(), { cache: 'no-store' })
       .then(function (v) {
-        if (!v.ok) throw new Error('Még nincs elmentett token, előbb a Token csere résznél mentsd el.');
+        if (!v.ok) throw new Error('Még nincs elmentett token, előbb add meg lent a tokent.');
         return v.json();
       })
       .then(function (t) {
-        return kibont(t, regi).catch(function () { throw new Error('Hibás jelenlegi jelszó.'); });
+        return kibont(t, uj).then(function () { return null; }, function () {
+          return kibont(t, regi).catch(function () {
+            throw new Error('A régi jelszót a böngésző nem ismeri, ezért a tokent nem tudom megtartani. Add meg lent a tokent is, és nyomd meg a Token mentése gombot.');
+          });
+        });
       })
-      .then(function (meglevo) { return tokenFajlMentes(meglevo, uj, 'Fájlküldő: jelszó csere'); })
+      .then(function (meglevo) {
+        if (meglevo === null) return null;
+        return tokenFajlMentes(meglevo, uj, 'Fájlküldő: jelszó csere');
+      })
       .then(function () {
         tarolo('fajlkuldo_kulcs', uj);
-        el('regiJelszo').value = '';
+        el('titkos').value = uj;
         el('ujJelszo').value = '';
-        kiir('Elmentve, a token megmaradt. Most írd át a FAJLKULDO_KULCS secretet is az új jelszóra. Egy-két perc, mire az oldal frissül.', 'ok');
+        kiir('Elmentve, a token megmaradt. Egy-két perc, mire az oldal frissül.', 'ok');
       })
       .catch(function (err) { kiir(err.message || String(err), 'hiba'); });
   };
 
-  // Token csere: új tokent ment a megadott jelszóval titkosítva.
+  // Token csere: az új tokent a fenti jelszóval (ha üres, a megjegyzettel) titkosítva menti.
   el('tokenMentes').onclick = function () {
     var uj = el('token').value.trim();
-    var jelszo = el('kulcs').value;
+    var jelszo = el('ujJelszo').value || tarolo('fajlkuldo_kulcs');
     var kiir = adminKiiro('adminUzenet');
-    if (!jelszo) return kiir('Add meg a jelszót (FAJLKULDO_KULCS).', 'hiba');
-    if (!uj) return kiir('Add meg az új tokent.', 'hiba');
+    if (!jelszo) return kiir('Add meg fent a jelszót.', 'hiba');
+    if (!uj) return kiir('Add meg a tokent.', 'hiba');
     kiir('Mentés…', 'ok');
     tokenFajlMentes(uj, jelszo, 'Fájlküldő: titkosított token frissítése')
       .then(function () {
         tarolo('fajlkuldo_kulcs', jelszo);
+        el('titkos').value = jelszo;
         el('token').value = '';
         kiir('Elmentve. Egy-két perc, mire az oldal frissül, utána lehet küldeni.', 'ok');
       })
