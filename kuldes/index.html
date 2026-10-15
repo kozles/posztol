@@ -286,7 +286,7 @@
       var futas = (v.workflow_runs || []).filter(function (r) { return (r.display_title || '').indexOf(azonosito) !== -1; })[0];
       if (futas && futas.status === 'completed') return futas;
       if (Date.now() - kezdet > 5 * 60 * 1000) return futas || null;
-      return var_(4000).then(function () { return futasKovetes(azonosito, kezdet); });
+      return var_(2000).then(function () { return futasKovetes(azonosito, kezdet); });
     });
   }
 
