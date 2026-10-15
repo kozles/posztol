@@ -154,7 +154,9 @@
   }
   // A titkos kulcs (a FAJLKULDO_KULCS secret) a böngészőben megmarad, nem kell mindig beírni.
   el('titkos').value = tarolo('fajlkuldo_kulcs');
-  if (location.hash === '#admin') el('admin').classList.remove('rejtett');
+  function adminMutat() { el('admin').classList.toggle('rejtett', location.hash !== '#admin'); }
+  adminMutat();
+  window.addEventListener('hashchange', adminMutat);
 
   function meretSzoveg(b) {
     if (b < 1024) return b + ' B';
