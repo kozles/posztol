@@ -39,6 +39,7 @@ jobs:
           EMAIL_KULDO: ${{ secrets.EMAIL_KULDO }}
           EMAIL_JELSZO: ${{ secrets.EMAIL_JELSZO }}
           EMAIL_NEV: ${{ vars.EMAIL_NEV }}
+          ENGEDETT_DOMAINEK: ${{ vars.ENGEDETT_DOMAINEK }}
           SMTP_HOST: ${{ vars.SMTP_HOST }}
           SMTP_PORT: ${{ vars.SMTP_PORT }}
         run: python kuldes/kuldo.py

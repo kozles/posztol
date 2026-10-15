@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 MAX_OSSZMERET = 25 * 1024 * 1024  # a Gmail csatolmány-korlátja
 MAX_CIMZETT = 10
+ALAP_DOMAINEK = "szamosiskola.hu,tanulo.szamosiskola.hu"
 PBKDF2_KOROK = 200_000  # ugyanannyi, mint az index.html-ben
 EMAIL_MINTA = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -66,14 +67,16 @@ def kibontas(csomag, kulcs_jelszo, letolto=blob_letoltes):
     return json.loads(nyers.decode("utf-8"))
 
 
-def level_osszeallitas(adat, felado, felado_nev):
-    cimzettek = [c for c in re.split(r"[,;\s]+", str(adat.get("cimzett", ""))) if c]
+def level_osszeallitas(adat, felado, felado_nev, domainek):
+    cimzettek = [c.lower() for c in re.split(r"[,;\s]+", str(adat.get("cimzett", ""))) if c]
     if not cimzettek:
         hiba("Nincs címzett megadva.")
     if len(cimzettek) > MAX_CIMZETT:
         hiba(f"Legfeljebb {MAX_CIMZETT} címzett adható meg.")
     if any(not EMAIL_MINTA.match(c) for c in cimzettek):
         hiba("Érvénytelen e-mail-cím a címzettek között.")
+    if any(c.rsplit("@", 1)[1] not in domainek for c in cimzettek):
+        hiba("Csak az engedélyezett domainekre lehet küldeni.")
 
     targy = re.sub(r"[\r\n]+", " ", str(adat.get("targy", ""))).strip()
     if not targy:
@@ -130,8 +133,10 @@ def main():
     except json.JSONDecodeError:
         hiba("Hibás csomag-adat.")
 
+    domainek = {d.strip().lower().lstrip("@") for d in (os.environ.get("ENGEDETT_DOMAINEK", "").strip() or ALAP_DOMAINEK).split(",") if d.strip()}
+
     adat = kibontas(csomag, kulcs_jelszo)
-    msg, cimzettek = level_osszeallitas(adat, felado, os.environ.get("EMAIL_NEV", "").strip())
+    msg, cimzettek = level_osszeallitas(adat, felado, os.environ.get("EMAIL_NEV", "").strip(), domainek)
 
     try:
         kuldes(msg, cimzettek, felado, jelszo, host, port)

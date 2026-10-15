@@ -90,7 +90,7 @@
 
   <form class="panel" id="urlap" novalidate>
     <label for="cimzett">Címzett <span class="sugo">(több cím vesszővel elválasztva)</span></label>
-    <input type="text" id="cimzett" inputmode="email" autocomplete="email" placeholder="pelda@email.hu" required>
+    <input type="text" id="cimzett" inputmode="email" autocomplete="email" placeholder="valaki@szamosiskola.hu" required>
 
     <label for="targy">Tárgy</label>
     <input type="text" id="targy" required>
@@ -142,6 +142,8 @@
   var AG = 'main';
   var PBKDF2_KOROK = 200000; // ugyanannyi, mint a kuldo.py-ban
   var MAX_OSSZMERET = 25 * 1024 * 1024;
+  // Csak ide lehet küldeni. A workflow is ellenőrzi (ENGEDETT_DOMAINEK), azt nem lehet megkerülni.
+  var DOMAINEK = ['szamosiskola.hu', 'tanulo.szamosiskola.hu'];
 
   var fajlok = [];
   var el = function (id) { return document.getElementById(id); };
@@ -326,6 +328,11 @@
     var titkos = el('titkos').value;
     if (!titkos) return jelez('Add meg a titkos kulcsot.', 'hiba');
     if (!cimzett) return jelez('Add meg a címzettet.', 'hiba');
+    var rossz = cimzett.split(/[,;\s]+/).filter(Boolean).filter(function (c) {
+      var m = c.toLowerCase().match(/^[^@\s]+@([^@\s]+)$/);
+      return !m || DOMAINEK.indexOf(m[1]) === -1;
+    });
+    if (rossz.length) return jelez('Csak @' + DOMAINEK.join(' vagy @') + ' címre lehet küldeni: ' + rossz.join(', '), 'hiba');
     if (!targy) return jelez('Add meg a tárgyat.', 'hiba');
     if (!fajlok.length) return jelez('Csatolj legalább egy fájlt.', 'hiba');
     if (osszmeret() > MAX_OSSZMERET) return jelez('A fájlok együtt nagyobbak 25 MB-nál.', 'hiba');
