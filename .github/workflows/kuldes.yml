@@ -1,0 +1,44 @@
+name: Fájlküldés
+
+# A kuldes/index.html oldal indítja. A fájlok titkosítva, egyetlen
+# git blobként érkeznek (nem kerülnek commitba), a címzett és a tárgy is
+# a titkosított csomagban van, így a nyilvános naplókban nem látszanak.
+run-name: Fájlküldés ${{ inputs.azonosito }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      azonosito:
+        description: "Az oldal által generált azonosító (a futás megtalálásához)"
+        required: true
+      csomag:
+        description: "JSON: a titkosított blob sha-ja, salt és iv"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  kuldes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet cryptography
+
+      - name: Levél küldése
+        env:
+          CSOMAG: ${{ inputs.csomag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAJLKULDO_KULCS: ${{ secrets.FAJLKULDO_KULCS }}
+          EMAIL_KULDO: ${{ secrets.EMAIL_KULDO }}
+          EMAIL_JELSZO: ${{ secrets.EMAIL_JELSZO }}
+          EMAIL_NEV: ${{ vars.EMAIL_NEV }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+        run: python kuldes/kuldo.py

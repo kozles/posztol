@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fájlküldő</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  /* Ugyanaz a kártyás, mobilbarát arculat, mint a többi Apps Script oldalé. */
+  :root {
+    color-scheme: light;
+    --bg: #f3f5f8; --card: #ffffff; --surface-2: #eef1f6; --border: #dde2ea;
+    --text: #16202e; --muted: #5d6a7c; --blue: #1f5f8b; --blue-soft: #e2edf6;
+    --red: #b3261e; --red-soft: #fbe3e1; --green: #1b7f4b; --green-soft: #e1f3e8;
+    --on-accent: #ffffff;
+    --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --f-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0f141b; --card: #161d27; --surface-2: #1c2531; --border: #2a3443;
+    --text: #e6ebf2; --muted: #93a0b2; --blue: #6fb0e0; --blue-soft: #1b2e40;
+    --red: #f2867f; --red-soft: #3a1a18; --green: #5cc98d; --green-soft: #15301f;
+    --on-accent: #0f141b;
+  } }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f141b; --card: #161d27; --surface-2: #1c2531; --border: #2a3443;
+    --text: #e6ebf2; --muted: #93a0b2; --blue: #6fb0e0; --blue-soft: #1b2e40;
+    --red: #f2867f; --red-soft: #3a1a18; --green: #5cc98d; --green-soft: #15301f;
+    --on-accent: #0f141b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font: 700 26px/1.15 var(--f-display); margin: 0 0 4px; }
+  .alcim { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  .sugo { color: var(--muted); font-weight: 400; font-size: 13px; }
+  input, textarea, button { font-family: inherit; color: var(--text); }
+  input[type="text"], input[type="email"], input[type="password"], textarea {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 15px; outline: none;
+  }
+  input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+  textarea { min-height: 100px; resize: vertical; }
+
+  .ejto {
+    display: block; border: 2px dashed var(--border); border-radius: 10px; padding: 22px 14px;
+    text-align: center; color: var(--muted); cursor: pointer; background: var(--surface-2);
+  }
+  .ejto.folotte { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+  .ejto strong { color: var(--blue); }
+  .ejto input { display: none; }
+
+  .lista { list-style: none; margin: 10px 0 0; padding: 0; }
+  .lista li {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border);
+    border-radius: 8px; margin-top: 6px; background: var(--card); min-width: 0;
+  }
+  .lista .nev { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lista .meret { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .torol { background: none; border: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .torol:hover { color: var(--red); }
+  .ossz { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .ossz.tul { color: var(--red); font-weight: 600; }
+
+  .gomb {
+    width: 100%; margin-top: 18px; padding: 14px 18px; border-radius: 10px; border: none;
+    background: var(--blue); color: var(--on-accent); font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .gomb:disabled { opacity: 0.6; cursor: default; }
+  .uzenet { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 14px; display: none; }
+  .uzenet.ok { display: block; background: var(--green-soft); color: var(--green); }
+  .uzenet.hiba { display: block; background: var(--red-soft); color: var(--red); }
+  .rejtett { display: none; }
+  details.beall { margin-top: 16px; }
+  details.beall summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+  details.beall .panel { margin-top: 10px; }
+  .gomb-kicsi { width: auto; margin-top: 12px; padding: 8px 14px; font-size: 14px; }
+  code { font-size: 13px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Fájlküldő</h1>
+  <div class="alcim">Add meg a címzettet és a tárgyat, csatold a fájlokat, és e-mailben elküldjük.</div>
+
+  <form class="panel" id="urlap" novalidate>
+    <label for="cimzett">Címzett <span class="sugo">(több cím vesszővel elválasztva)</span></label>
+    <input type="text" id="cimzett" inputmode="email" autocomplete="email" placeholder="pelda@email.hu" required>
+
+    <label for="targy">Tárgy</label>
+    <input type="text" id="targy" required>
+
+    <label for="szoveg">Üzenet <span class="sugo">(nem kötelező)</span></label>
+    <textarea id="szoveg"></textarea>
+
+    <label>Fájlok</label>
+    <label class="ejto" id="ejto">
+      <input type="file" id="fajlInput" multiple>
+      Húzd ide a fájlokat, vagy <strong>kattints a kiválasztáshoz</strong>
+      <div class="sugo">Több fájl is csatolható, együtt legfeljebb 25 MB.</div>
+    </label>
+    <ul class="lista" id="lista"></ul>
+    <div class="ossz" id="ossz"></div>
+
+    <button type="submit" class="gomb" id="gomb">Küldés</button>
+    <div class="uzenet" id="uzenet" role="status"></div>
+  </form>
+
+  <details class="beall" id="beall">
+    <summary>Beállítások (első használatkor kell)</summary>
+    <div class="panel">
+      <label for="token">GitHub token</label>
+      <input type="password" id="token" autocomplete="off" placeholder="github_pat_...">
+      <div class="sugo">Fine-grained token csak ehhez a repóhoz, <code>Contents</code> és <code>Actions</code>: Read and write.</div>
+      <label for="kulcs">Titkosító kulcs</label>
+      <input type="password" id="kulcs" autocomplete="off">
+      <div class="sugo">Ugyanaz, mint a repó <code>FAJLKULDO_KULCS</code> secretje. Csak ebben a böngészőben tárolódik.</div>
+      <button type="button" class="gomb gomb-kicsi" id="mentes">Mentés</button>
+    </div>
+  </details>
+</div>
+
+<script>
+  // A küldést a repó GitHub Actions workflow-ja végzi (.github/workflows/fajlkuldo.yml),
+  // az e-mail fiók adatai a repó secretjeiben vannak, az oldal nem látja őket.
+  // A repót az oldal címéből számoljuk ki (kozles.github.io/posztol/kuldes/ -> kozles/posztol),
+  // így átnevezés után sem kell átírni.
+  var REPO = (function () {
+    var m = location.hostname.match(/^([^.]+)\.github\.io$/);
+    if (!m) return 'kozles/posztol';
+    var resz = location.pathname.split('/').filter(Boolean)[0];
+    return m[1] + '/' + (resz && !/\.html$/.test(resz) ? resz : m[1] + '.github.io');
+  })();
+  var WORKFLOW = 'kuldes.yml';
+  var AG = 'main';
+  var PBKDF2_KOROK = 200000; // ugyanannyi, mint a kuldo.py-ban
+  var MAX_OSSZMERET = 25 * 1024 * 1024;
+
+  var fajlok = [];
+  var el = function (id) { return document.getElementById(id); };
+
+  function tarolo(kulcs, ertek) {
+    try {
+      if (ertek === undefined) return localStorage.getItem(kulcs) || '';
+      localStorage.setItem(kulcs, ertek);
+    } catch (e) { return ''; }
+  }
+  el('token').value = tarolo('fajlkuldo_token');
+  el('kulcs').value = tarolo('fajlkuldo_kulcs');
+  if (!el('token').value || !el('kulcs').value) el('beall').open = true;
+  el('mentes').onclick = function () {
+    tarolo('fajlkuldo_token', el('token').value.trim());
+    tarolo('fajlkuldo_kulcs', el('kulcs').value);
+    el('beall').open = false;
+  };
+
+  function meretSzoveg(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+    return (b / 1024 / 1024).toFixed(1) + ' MB';
+  }
+  function osszmeret() { return fajlok.reduce(function (s, f) { return s + f.size; }, 0); }
+
+  function rajzol() {
+    var lista = el('lista');
+    lista.innerHTML = '';
+    fajlok.forEach(function (f, i) {
+      var li = document.createElement('li');
+      var nev = document.createElement('span'); nev.className = 'nev'; nev.textContent = f.name; nev.title = f.name;
+      var meret = document.createElement('span'); meret.className = 'meret'; meret.textContent = meretSzoveg(f.size);
+      var torol = document.createElement('button'); torol.type = 'button'; torol.className = 'torol';
+      torol.setAttribute('aria-label', f.name + ' eltávolítása'); torol.textContent = '×';
+      torol.onclick = function () { fajlok.splice(i, 1); rajzol(); };
+      li.appendChild(nev); li.appendChild(meret); li.appendChild(torol);
+      lista.appendChild(li);
+    });
+    var ossz = el('ossz');
+    if (fajlok.length) {
+      var tul = osszmeret() > MAX_OSSZMERET;
+      ossz.textContent = fajlok.length + ' fájl, összesen ' + meretSzoveg(osszmeret()) + (tul ? ' (túl nagy, max. 25 MB)' : '');
+      ossz.className = 'ossz' + (tul ? ' tul' : '');
+    } else {
+      ossz.textContent = '';
+    }
+  }
+  function hozzaad(lista) { Array.prototype.forEach.call(lista, function (f) { fajlok.push(f); }); rajzol(); }
+
+  el('fajlInput').addEventListener('change', function (e) { hozzaad(e.target.files); e.target.value = ''; });
+  var ejto = el('ejto');
+  ['dragenter', 'dragover'].forEach(function (t) {
+    ejto.addEventListener(t, function (e) { e.preventDefault(); ejto.classList.add('folotte'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    ejto.addEventListener(t, function (e) { e.preventDefault(); ejto.classList.remove('folotte'); });
+  });
+  ejto.addEventListener('drop', function (e) { hozzaad(e.dataTransfer.files); });
+
+  function bajtBase64(bajtok) {
+    var s = '', DARAB = 0x8000;
+    for (var i = 0; i < bajtok.length; i += DARAB) s += String.fromCharCode.apply(null, bajtok.subarray(i, i + DARAB));
+    return btoa(s);
+  }
+
+  function beolvas(f) {
+    return f.arrayBuffer().then(function (buf) {
+      return { nev: f.name, tipus: f.type || 'application/octet-stream', base64: bajtBase64(new Uint8Array(buf)) };
+    });
+  }
+
+  // AES-GCM titkosítás a FAJLKULDO_KULCS-ból PBKDF2-vel képzett kulccsal.
+  function titkosit(szoveg, jelszo) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(jelszo), 'PBKDF2', false, ['deriveKey'])
+      .then(function (alap) {
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: salt, iterations: PBKDF2_KOROK, hash: 'SHA-256' },
+          alap, { name: 'AES-GCM', length: 256 }, false, ['encrypt']);
+      })
+      .then(function (kulcs) { return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, kulcs, enc.encode(szoveg)); })
+      .then(function (titkos) {
+        return { adat: bajtBase64(new Uint8Array(titkos)), salt: bajtBase64(salt), iv: bajtBase64(iv) };
+      });
+  }
+
+  function api(ut, opciok) {
+    opciok = opciok || {};
+    opciok.headers = {
+      'Authorization': 'Bearer ' + tarolo('fajlkuldo_token'),
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+    return fetch('https://api.github.com/repos/' + REPO + ut, opciok).then(function (v) {
+      if (v.status === 401) throw new Error('A GitHub token érvénytelen vagy lejárt (Beállítások).');
+      if (v.status === 403 || v.status === 404) throw new Error('A GitHub tokennek nincs joga ehhez a repóhoz (Contents és Actions: Read and write kell).');
+      if (!v.ok) return v.text().then(function (t) { throw new Error('GitHub hiba (' + v.status + '): ' + t.slice(0, 200)); });
+      return v.status === 204 ? null : v.json();
+    });
+  }
+
+  function var_(ms) { return new Promise(function (ok) { setTimeout(ok, ms); }); }
+
+  // A futást a run-name-ben lévő azonosító alapján keressük meg, és megvárjuk a végét.
+  function futasKovetes(azonosito, kezdet) {
+    return api('/actions/workflows/' + WORKFLOW + '/runs?event=workflow_dispatch&per_page=10').then(function (v) {
+      var futas = (v.workflow_runs || []).filter(function (r) { return (r.display_title || '').indexOf(azonosito) !== -1; })[0];
+      if (futas && futas.status === 'completed') return futas;
+      if (Date.now() - kezdet > 5 * 60 * 1000) return futas || null;
+      return var_(4000).then(function () { return futasKovetes(azonosito, kezdet); });
+    });
+  }
+
+  function jelez(szoveg, tipus) {
+    var u = el('uzenet');
+    u.textContent = szoveg;
+    u.className = 'uzenet ' + tipus;
+  }
+
+  el('urlap').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var cimzett = el('cimzett').value.trim();
+    var targy = el('targy').value.trim();
+    if (!tarolo('fajlkuldo_token') || !tarolo('fajlkuldo_kulcs')) { el('beall').open = true; return jelez('Előbb add meg és mentsd el a beállításokat.', 'hiba'); }
+    if (!cimzett) return jelez('Add meg a címzettet.', 'hiba');
+    if (!targy) return jelez('Add meg a tárgyat.', 'hiba');
+    if (!fajlok.length) return jelez('Csatolj legalább egy fájlt.', 'hiba');
+    if (osszmeret() > MAX_OSSZMERET) return jelez('A fájlok együtt nagyobbak 25 MB-nál.', 'hiba');
+
+    var gomb = el('gomb');
+    gomb.disabled = true;
+    var allapot = function (s) { gomb.textContent = s; };
+    jelez('', '');
+    var azonosito = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var kezdet = Date.now();
+
+    allapot('Fájlok beolvasása…');
+    Promise.all(fajlok.map(beolvas))
+      .then(function (beolvasott) {
+        allapot('Titkosítás…');
+        var csomag = JSON.stringify({ cimzett: cimzett, targy: targy, uzenet: el('szoveg').value, fajlok: beolvasott });
+        return titkosit(csomag, tarolo('fajlkuldo_kulcs'));
+      })
+      .then(function (t) {
+        allapot('Feltöltés…');
+        return api('/git/blobs', { method: 'POST', body: JSON.stringify({ content: t.adat, encoding: 'utf-8' }) })
+          .then(function (blob) { return { sha: blob.sha, salt: t.salt, iv: t.iv }; });
+      })
+      .then(function (csomag) {
+        allapot('Küldés indítása…');
+        return api('/actions/workflows/' + WORKFLOW + '/dispatches', {
+          method: 'POST',
+          body: JSON.stringify({ ref: AG, inputs: { azonosito: azonosito, csomag: JSON.stringify(csomag) } })
+        });
+      })
+      .then(function () {
+        allapot('Küldés folyamatban…');
+        return futasKovetes(azonosito, kezdet);
+      })
+      .then(function (futas) {
+        if (futas && futas.conclusion === 'success') {
+          jelez('Elküldve ' + cimzett + ' címre, ' + fajlok.length + ' csatolmánnyal.', 'ok');
+          fajlok = []; rajzol();
+          el('targy').value = ''; el('szoveg').value = '';
+        } else if (futas && futas.status === 'completed') {
+          jelez('Nem sikerült elküldeni. A hiba oka a GitHub Actions naplójában látszik: ' + futas.html_url, 'hiba');
+        } else {
+          jelez('A küldés elindult, de még nem fejeződött be. Az állapotát a repó Actions fülén látod.', 'ok');
+        }
+      })
+      .catch(function (err) { jelez(err.message || String(err), 'hiba'); })
+      .then(function () { gomb.disabled = false; allapot('Küldés'); });
+  });
+</script>
+</body>
+</html>
