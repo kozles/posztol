@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Írj nekem – Mr.Gabee</title>
-<meta name="description" content="Üzenet, ötlet vagy álláshirdetés a Mr.Gabee oldalnak.">
+<meta name="description" content="Üzenet, ötlet, álláshirdetés vagy vállalkozás bemutatása a Mr.Gabee oldalon.">
 <meta property="og:title" content="Írj nekem – Mr.Gabee">
-<meta property="og:description" content="Üzenet, ötlet vagy álláshirdetés: itt gyorsan elérsz.">
+<meta property="og:description" content="Üzenet, ötlet, álláshirdetés vagy vállalkozás bemutatása: itt gyorsan elérsz.">
 <meta property="og:image" content="https://kozles.github.io/posztol/kepek/otlet_keres.png">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
@@ -47,6 +47,12 @@
     <div><small>INGYENES</small><strong>Álláshirdetés feladása</strong></div><span class="arrow">→</span>
   </a>
 
+  <h2>VÁLLALKOZÁS BEMUTATÁSA</h2>
+  <a class="card hirdetes" id="vallalkozas" href="#" rel="noopener">
+    <div class="ic" style="background:linear-gradient(135deg,#ffe27a,#f29a2e)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9M3 9h18M3 9v11h18V9M9 20v-6h6v6"/></svg></div>
+    <div><small>INGYENES</small><strong>Vállalkozás bemutatása</strong></div><span class="arrow">→</span>
+  </a>
+
   <h2>ÜZENET</h2>
   <a class="card" href="https://m.me/104411308403346" rel="noopener">
     <div class="ic" style="background:linear-gradient(135deg,#00b2ff,#006aff)"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.4 2 2 6.1 2 11.7c0 2.9 1.2 5.5 3.2 7.2V22l3-1.6c1.1.3 2.3.5 3.8.5 5.6 0 10-4.1 10-9.7S17.6 2 12 2zm1 13-2.6-2.7L5.4 15l5.5-5.8 2.6 2.7 5-2.7L13 15z"/></svg></div>
@@ -67,6 +73,12 @@
   var URLAP = "";
   document.getElementById("hirdetes").href = URLAP ||
     "mailto:olvaso@mrgabee.hu?subject=" + encodeURIComponent("Álláshirdetés – Mr.Gabee");
+  // Vállalkozás bemutatása: e-mail előre kitöltött adatlappal
+  document.getElementById("vallalkozas").href =
+    "mailto:olvaso@mrgabee.hu?subject=" + encodeURIComponent("Vállalkozás bemutatása – Mr.Gabee") +
+    "&body=" + encodeURIComponent(
+      "Vállalkozás neve:\nMivel foglalkoztok:\nCím:\nNyitvatartás:\n" +
+      "Telefon / weboldal / Facebook:\nPár mondat rólatok:\n\n(Ha van, csatolj egy-két fotót is!)");
 </script>
 </body>
 </html>
